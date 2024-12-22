@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Visualization - Pakistan Cities</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            width: 100%;
+            text-align: center;
+            font-size: 24px;
+        }
+        .container {
+            margin: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        select {
+            width: calc(100% - 22px);
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .graph-container {
+            position: relative;
+            width: 1200px;
+            height: 800px;
+            border: 1px solid #ccc;
+            background: #fafafa;
+            margin: 20px auto;
+            border-radius: 10px;
+        }
+        .node {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #4CAF50;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+        }
+        .edge {
+            position: absolute;
+            background: #333;
+            height: 2px;
+            transform-origin: left center;
+        }
+        .cost {
+            position: absolute;
+            background: white;
+            color: #333;
+            padding: 2px 5px;
+            border-radius: 5px;
+            font-size: 12px;
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+        }
+        .highlighted {
+            background: red;
+            color: white;
+        }
+        .output {
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>Pathfinding in Pakistan Cities</header>
+    <div class="container">
+        <h2>Select Cities</h2>
+        <select id="startCity">
+            <option value="">Select Start City</option>
+            <option value="Karachi">Karachi</option>
+            <option value="Lahore">Lahore</option>
+            <option value="Islamabad">Islamabad</option>
+            <option value="Peshawar">Peshawar</option>
+            <option value="Quetta">Quetta</option>
+            <option value="Multan">Multan</option>
+            <option value="Faisalabad">Faisalabad</option>
+            <option value="Rawalpindi">Rawalpindi</option>
+            <option value="Sialkot">Sialkot</option>
+            <option value="Hyderabad">Hyderabad</option>
+        </select>
+        <select id="endCity">
+            <option value="">Select End City</option>
+            <option value="Karachi">Karachi</option>
+            <option value="Lahore">Lahore</option>
+            <option value="Islamabad">Islamabad</option>
+            <option value="Peshawar">Peshawar</option>
+            <option value="Quetta">Quetta</option>
+            <option value="Multan">Multan</option>
+            <option value="Faisalabad">Faisalabad</option>
+            <option value="Rawalpindi">Rawalpindi</option>
+            <option value="Sialkot">Sialkot</option>
+            <option value="Hyderabad">Hyderabad</option>
+        </select>
+
+        <h2>Select Algorithm</h2>
+        <button onclick="runAlgorithm('BFS')">BFS</button>
+        <button onclick="runAlgorithm('DFS')">DFS</button>
+        <button onclick="runAlgorithm('UCS')">UCS</button>
+
+        <h2>Add a New City and Connect</h2>
+        <input type="text" id="newCity" placeholder="New City Name">
+        <select id="connectToCity">
+            <option value="">Select City to Connect</option>
+        </select>
+        <input type="number" id="newCityCost" placeholder="Enter Cost" min="0">
+        <button onclick="addNewCity()">Add and Connect City</button>
+
+        <div class="output" id="output">
+            <p>Output will be displayed here.</p>
+        </div>
+    </div>
+    <div class="graph-container" id="graphContainer"></div>
+
+    <script>
+        let graph = {
+            Karachi: { Lahore: 10, Quetta: 12, Hyderabad: 5 },
+            Lahore: { Islamabad: 7, Multan: 6 },
+            Islamabad: { Peshawar: 4, Rawalpindi: 2 },
+            Peshawar: { Quetta: 8 },
+            Quetta: { Karachi: 12 },
+            Multan: { Faisalabad: 3 },
+            Faisalabad: { Lahore: 5, Sialkot: 6 },
+            Rawalpindi: { Sialkot: 4 },
+            Hyderabad: { Multan: 8 },
+            Sialkot: {}
+        };
+
+        const positions = {
+            Karachi: { x: 100, y: 650 },
+            Lahore: { x: 250, y: 500 },
+            Islamabad: { x: 400, y: 350 },
+            Peshawar: { x: 550, y: 200 },
+            Quetta: { x: 700, y: 350 },
+            Multan: { x: 50, y: 500 },
+            Faisalabad: { x: 500, y: 650 },
+            Rawalpindi: { x: 550, y: 500 },
+            Sialkot: { x: 600, y: 350 },
+            Hyderabad: { x: 550, y: 200 }
+        };
+
+        const graphContainer = document.getElementById("graphContainer");
+        const connectToCity = document.getElementById("connectToCity");
+
+        function visualizeGraph(highlightPath = []) {
+            graphContainer.innerHTML = ""; // Clear existing graph
+            Object.keys(positions).forEach(city => {
+                const { x, y } = positions[city];
+                const node = document.createElement("div");
+                node.className = "node";
+                if (highlightPath.includes(city)) node.classList.add("highlighted");
+                node.style.left = `${x}px`;
+                node.style.top = `${y}px`;
+                node.textContent = city;
+                graphContainer.appendChild(node);
+            });
+
+            Object.keys(graph).forEach(fromCity => {
+                const fromPos = positions[fromCity];
+                for (const toCity in graph[fromCity]) {
+                    createEdge(fromPos, positions[toCity], graph[fromCity][toCity]);
+                }
+            });
+        }
+
+        function createEdge(from, to, cost) {
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+            const edge = document.createElement("div");
+            edge.className = "edge";
+            edge.style.width = `${length}px`;
+            edge.style.left = `${from.x + 40}px`;
+            edge.style.top = `${from.y + 40}px`;
+            edge.style.transform = `rotate(${angle}deg)`;
+            graphContainer.appendChild(edge);
+
+            const costLabel = document.createElement("div");
+            costLabel.className = "cost";
+            costLabel.textContent = cost;
+            costLabel.style.left = `${from.x + dx / 2 + 40}px`;
+            costLabel.style.top = `${from.y + dy / 2 + 40}px`;
+            graphContainer.appendChild(costLabel);
+        }
+
+        function updateCitySelectOptions() {
+            connectToCity.innerHTML = '<option value="">Select City to Connect</option>';
+            Object.keys(graph).forEach(city => {
+                const option = document.createElement("option");
+                option.value = city;
+                option.textContent = city;
+                connectToCity.appendChild(option);
+            });
+        }
+
+        function addNewCity() {
+            const newCity = document.getElementById("newCity").value.trim();
+            const connectCity = document.getElementById("connectToCity").value;
+            const cost = parseInt(document.getElementById("newCityCost").value, 10);
+
+            if (newCity && !graph[newCity] && connectCity && !isNaN(cost) && cost > 0) {
+                // Add new city with no connections initially
+                graph[newCity] = {};
+                positions[newCity] = { x: Math.random() * 1000, y: Math.random() * 600 }; // Random position
+
+                // Add the new city to the selected city connection
+                graph[connectCity][newCity] = cost;
+                graph[newCity][connectCity] = cost; // Make the connection bidirectional
+
+                alert(`City ${newCity} added and connected to ${connectCity} with cost ${cost}`);
+                updateCitySelectOptions(); // Update the city connection options
+                visualizeGraph(); // Re-render the graph
+            } else {
+                alert("Invalid input. Ensure all fields are filled correctly.");
+            }
+        }
+
+        function runAlgorithm(algorithm) {
+            const start = document.getElementById("startCity").value;
+            const end = document.getElementById("endCity").value;
+
+            if (!start || !end) {
+                document.getElementById("output").innerHTML = "<p>Please select both start and end cities.</p>";
+                return;
+            }
+
+            let path = [];
+            switch (algorithm) {
+                case 'BFS':
+                    path = bfs(start, end);
+                    break;
+                case 'DFS':
+                    path = dfs(start, end);
+                    break;
+                case 'UCS':
+                    path = ucs(start, end);
+                    break;
+            }
+
+            visualizeGraph(path);
+            document.getElementById("output").innerHTML = `
+                <p><strong>Algorithm:</strong> ${algorithm}</p>
+                <p><strong>Path:</strong> ${path.join(" -> ")}</p>
+                ${algorithm === 'UCS' ? `<p><strong>Cost:</strong> ${getPathCost(path)}</p>` : ""}
+            `;
+        }
+
+        function bfs(start, end) {
+            const queue = [start];
+            const visited = new Set();
+            const parent = {};
+            visited.add(start);
+
+            while (queue.length > 0) {
+                const current = queue.shift();
+
+                if (current === end) break;
+
+                for (const neighbor in graph[current]) {
+                    if (!visited.has(neighbor)) {
+                        visited.add(neighbor);
+                        parent[neighbor] = current;
+                        queue.push(neighbor);
+                    }
+                }
+            }
+
+            const path = [];
+            let current = end;
+            while (current) {
+                path.unshift(current);
+                current = parent[current];
+            }
+            return path;
+        }
+
+        function dfs(start, end) {
+            const stack = [start];
+            const visited = new Set();
+            const parent = {};
+            visited.add(start);
+
+            while (stack.length > 0) {
+                const current = stack.pop();
+
+                if (current === end) break;
+
+                for (const neighbor in graph[current]) {
+                    if (!visited.has(neighbor)) {
+                        visited.add(neighbor);
+                        parent[neighbor] = current;
+                        stack.push(neighbor);
+                    }
+                }
+            }
+
+            const path = [];
+            let current = end;
+            while (current) {
+                path.unshift(current);
+                current = parent[current];
+            }
+            return path;
+        }
+
+        function ucs(start, end) {
+            const pq = [{ node: start, cost: 0 }];
+            const visited = new Set();
+            const costToNode = { [start]: 0 };
+            const parent = {};
+
+            while (pq.length > 0) {
+                pq.sort((a, b) => a.cost - b.cost);
+                const { node, cost } = pq.shift();
+
+                if (node === end) break;
+
+                if (!visited.has(node)) {
+                    visited.add(node);
+                    for (const neighbor in graph[node]) {
+                        const newCost = cost + graph[node][neighbor];
+                        if (newCost < (costToNode[neighbor] || Infinity)) {
+                            costToNode[neighbor] = newCost;
+                            parent[neighbor] = node;
+                            pq.push({ node: neighbor, cost: newCost });
+                        }
+                    }
+                }
+            }
+
+            const path = [];
+            let current = end;
+            while (current) {
+                path.unshift(current);
+                current = parent[current];
+            }
+            return path;
+        }
+
+        function getPathCost(path) {
+            let cost = 0;
+            for (let i = 0; i < path.length - 1; i++) {
+                const from = path[i];
+                const to = path[i + 1];
+                cost += graph[from][to];
+            }
+            return cost;
+        }
+
+        updateCitySelectOptions();
+        visualizeGraph(); // Initial render of the graph
+    </script>
+</body>
+</html>
